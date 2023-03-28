@@ -26,7 +26,7 @@
 .numeric-keyboard {
   width: 50%;
   height: 100%;
-  background: #e0e0e0;
+  background: #e6e5e5;
   table-layout: fixed;
   border-collapse: separate;
   border-spacing: 7px;
@@ -42,7 +42,7 @@
   -webkit-transition: background 0.3s;
   -o-transition: background 0.3s;
   transition: background 0.3s;
-  color: #3b3b3b;
+  color: #181c32;
   background: #fafafa;
   padding: 5px 0 5px 0;
   border-radius: 8px;
@@ -54,7 +54,8 @@
 
 .numeric-keyboard-key[data-key=''] {
   pointer-events: none;
-  background: #edeef1;
+  background:#fafafa;
+;
 }
 
 .numeric-keyboard-key[data-key='esc'] {
@@ -62,15 +63,15 @@
 }
 
 .numeric-keyboard-key[data-key='enter'] {
-  color: #5695e8;
-  background: #ededed;
+  color: #ffffff;
+  background: #0095e8;
   font-size: 20px;
   letter-spacing: -0.5px !important;
 }
 
 .numeric-keyboard-key[data-key='del'],
 .numeric-keyboard-key[data-key='.'] {
-  background: #ededed;
+  background: #fafafa;
   color: #4c4c4c;
 }
 

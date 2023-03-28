@@ -45,7 +45,6 @@ export class NumericKeyboardComponent implements OnInit {
 
   private init(options: KeyboardOptions) {
     const { layout } = options;
-
     let resolvedLayout: Layout;
     if (typeof layout === 'string') {
       resolvedLayout = Layouts[layout];
