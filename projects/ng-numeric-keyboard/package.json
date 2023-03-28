@@ -1,0 +1,27 @@
+{
+  "name": "zen-numeric-keyboard",
+  "version": "1.0.3",
+  "description": "Number keyboard for mobile browsers For Angular",
+  "author": "sunrose",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sunrose3/ng_numeric_keyboard.git"
+  },
+  "bugs": {
+    "url": "https://github.com/sunrose3/ng_numeric_keyboard/issues"
+  },
+  "homepage": "https://github.com/sunrose3/ng_numeric_keyboard",
+  "keywords": [
+    "angular",
+    "angular13",
+    "angular14",
+    "keyboard",
+    "numeric",
+    "numeric-keyboard",
+    "mobile",
+    "mobile keyboard",
+    "number keyboard"
+  ],
+  "license": "MIT",
+  "peerDependencies": {}
+}
