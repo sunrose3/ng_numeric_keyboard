@@ -327,13 +327,13 @@ export class NumericInputComponent implements OnInit, OnDestroy, AfterViewInit, 
           newValue = parseFloat(newValue);
           if (isNaN(newValue)) {
             newValue = '';
-            this._negative = false;
-            this.set('cursorPos', 0);
+            this._negative = false;//空的时候默认为正数
+            this.set('cursorPos', 0);//加了可能有用 大脑短路了 
           }
         } else if (newValue.length > maxlength || (type === 'tel' && !RTel.test(newValue))) {
           return;
         }
-        //解决一直输出多个0在前面的问题
+        //解决一直输出多个0在前面的问题 一言难尽啊!不是语言能说明白的
         let newValueArr = newValueString === "-"||newValueString === "0." || newValueString === "-0." || inputKey ==="." ||newRawValue[newRawValue.length - 1] === "."? newRawValue : newValue.toString().split("");
         if (newValueArr.length !== newRawValue.length && otherPos !== 2) {
           otherPos = otherPos - (newRawValue.length - newValueArr.length);
