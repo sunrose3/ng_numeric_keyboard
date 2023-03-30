@@ -22,7 +22,6 @@ import * as Keys from '../utils/keys';
 import { coerceBooleanProperty, animate } from '../utils/utils';
 import { Layout, LayoutsType } from '../utils/layouts';
 
-const RNumber = /^-?\d*(?:\.\d*)?$/;
 const RTel = /^\d*$/;
 
 const KeyboardCenter = (() => {
@@ -283,6 +282,7 @@ export class NumericInputComponent implements OnInit, OnDestroy, AfterViewInit, 
     const { type, maxlength } = this.kp;
     const { rawValue, cursorPos, formatFn } = this.ks;
 
+    let otherPos = 1;
     const input = (inputKey: any) => {
       const isAdd = typeof inputKey !== 'undefined';
       const newRawValue = rawValue.slice();
@@ -290,49 +290,59 @@ export class NumericInputComponent implements OnInit, OnDestroy, AfterViewInit, 
         if (inputKey === '00') {
           newRawValue.splice(cursorPos, 0, "0");
           newRawValue.splice(cursorPos, 0, "0");
-        } else {
+          otherPos = 2;
+        } else if ((this.layout === "decimals" || this.layout === "negativeDecimals") &&//为浮点数
+          ((newRawValue.length === 0 && inputKey == "0") ||//长度为0 且输入为"0"
+            (newRawValue.length === 1 && newRawValue[0] == "-" && inputKey == "0") ||//长度为1 开头是"-" 且输入的是"0"
+            //输入的是"."的时候 (开头是"-" 长度为1) 或者长度为 0
+            (inputKey === '.' && ((newRawValue[0] === '-' && newRawValue.length === 1) || (newRawValue.length === 0))))) {
+          newRawValue.splice(cursorPos, 0, ".");
+          newRawValue.splice(cursorPos, 0, "0");
+          otherPos = 2;
+        }
+        else {
           newRawValue.splice(cursorPos, 0, inputKey);
         }
       } else {
-        newRawValue.splice(cursorPos - 1, 1);
+        if ((this.layout === "decimals" || this.layout === "negativeDecimals") && //为浮点数
+          (newRawValue.length === 2 && newRawValue[0] == "0") ||//长度是2 第一个开头是0
+          (newRawValue.length === 3 && newRawValue[0] == "-" && newRawValue[1] == "0")) { //长度是3 开头是"-" 第二个是"0"
+          newRawValue.splice(cursorPos - 2, 2);
+          otherPos = 2;
+        } else {
+          newRawValue.splice(cursorPos - 1, 1);
+        }
       }
-
       let newValue = newRawValue.join('');
-
+      let newValueString = newRawValue.join('');
       if (formatFn(newValue)) {
         if (type === 'number') {
-          if (this.layout === "number" || this.layout === "negativeNumber") {//开头为0 直接干掉
-            if (newRawValue[0] == "0") return;
-            if (newRawValue[0] == "-" && newRawValue[1] == "0") return;
-          }
-          if (!RNumber.test(newValue)) {
+          if (this.layout === 'number' && !/[1-9]\d*|0/.test(newValue) && newValue) {
             return;
-          }
+          } else if (this.layout === 'negativeNumber' && !/^-?(([1-9]{1}\d*)|0)$/.test(newValue) && newValue && newValue !== '-') {
+            return;
+          } else if (this.layout === 'decimals' && !/^\d*(?:\.\d*)?$/.test(newValue)) {
+            return;
+          } else if (this.layout === 'negativeDecimals' && !/^-?\d*(?:\.\d*)?$/.test(newValue)) { return; }
           newValue = parseFloat(newValue);
           if (isNaN(newValue)) {
             newValue = '';
             this._negative = false;
+            this.set('cursorPos', 0);
           }
         } else if (newValue.length > maxlength || (type === 'tel' && !RTel.test(newValue))) {
           return;
         }
+        //解决一直输出多个0在前面的问题
+        let newValueArr = newValueString === "-"||newValueString === "0." || newValueString === "-0." || inputKey ==="." ||newRawValue[newRawValue.length - 1] === "."? newRawValue : newValue.toString().split("");
+        if (newValueArr.length !== newRawValue.length && otherPos !== 2) {
+          otherPos = otherPos - (newRawValue.length - newValueArr.length);
+        }
 
         this.set('value', newValue);
-        this.set('rawValue', newRawValue);
-        this.set('cursorPos', isAdd ? (inputKey === "00" ? cursorPos + 2 : cursorPos + 1) : cursorPos - 1);
-
-        //处理小数问题下的0. 和-0.的问题
-        if ((this.layout === "decimals" || this.layout === "negativeDecimals")) {
-          if ((newRawValue.length === 1 && newRawValue[0] == "0") || (newRawValue.length === 2 && newRawValue[0] == "-" && newRawValue[1] == "0"))
-            if (isAdd) {
-              newRawValue.splice(cursorPos + 1, 0, '.');
-              newValue = newRawValue.join('');
-              this.set('cursorPos', cursorPos + 2);
-            } else {
-              newRawValue.splice(cursorPos - 2, 2);
-              this.set('cursorPos', cursorPos - 2);
-            }
-        }
+        // this.set('rawValue', newRawValue);
+        this.set('rawValue', newValueArr);
+        this.set('cursorPos', isAdd ? cursorPos + otherPos : cursorPos - otherPos);
         this.dispatch('input', newValue);
       }
     };
