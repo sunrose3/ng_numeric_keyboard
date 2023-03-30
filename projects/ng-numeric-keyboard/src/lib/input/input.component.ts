@@ -334,7 +334,7 @@ export class NumericInputComponent implements OnInit, OnDestroy, AfterViewInit, 
         }
         //解决一直输出多个0在前面的输入问题 一言难尽啊!不是语言能说明白的,特殊几个情况以外保留输入的数组,剩下的获取当前值的数组.
         //因为"000"的值是"0"
-        let newValueArr = newValueString === "-" || newValueString === "0." || newValueString === "-0." ||
+        let newValueArr = newValueString === "-" || newValueString === "0." || newValueString === "-0" || newValueString === "-0." ||
           inputKey === "." || newRawValue[newRawValue.length - 1] === "." ? newRawValue : newValue.toString().split("");
         if (newValueArr.length !== newRawValue.length && otherPos !== 2) {
           otherPos = otherPos - (newRawValue.length - newValueArr.length);
