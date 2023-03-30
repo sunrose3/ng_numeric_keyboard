@@ -332,14 +332,33 @@ export class NumericInputComponent implements OnInit, OnDestroy, AfterViewInit, 
         } else if (newValue.length > maxlength || (type === 'tel' && !RTel.test(newValue))) {
           return;
         }
+        // debugger
         //解决一直输出多个0在前面的输入问题 一言难尽啊!不是语言能说明白的,特殊几个情况以外保留输入的数组,剩下的获取当前值的数组.
         //因为"000"的值是"0"
-        let newValueArr = newValueString === "-" || newValueString === "0." || newValueString === "-0" || newValueString === "-0." ||
+        let newValueArr = newValueString === "-" || (newValueString.indexOf("0.") != -1 && newValueString.substring(0, 2) === "0.") || newValueString === "-0" || (newValueString.indexOf("-0.") != -1) ||
           inputKey === "." || newRawValue[newRawValue.length - 1] === "." ? newRawValue : newValue.toString().split("");
+        //-0的问题,toString()会认为是0
+        //分别解决的错误为 0000.00显示为0 
+        // -00.00 显示为0
+        //-0.000 显示为0 
+        if (newValue === 0 && inputKey === "0") {
+          if (this._negative && cursorPos < 3) {
+            if (newValueString.indexOf(".") != -1) {
+              newRawValue.splice(cursorPos, 1);
+              newValueArr = newRawValue;
+            } else {
+              newValueArr = ["-", "0"];
+            }
+          } else if (!this._negative && cursorPos < 2) {
+            if (newValueString.indexOf(".") != -1) {
+              newRawValue.splice(cursorPos, 1);
+              newValueArr = newRawValue;
+            } 
+          }
+        }
         if (newValueArr.length !== newRawValue.length && otherPos !== 2) {
           otherPos = otherPos - (newRawValue.length - newValueArr.length);
         }
-
         this.set('value', newValue);
         this.set('rawValue', newValueArr);
         this.set('cursorPos', isAdd ? cursorPos + otherPos : cursorPos - otherPos);
