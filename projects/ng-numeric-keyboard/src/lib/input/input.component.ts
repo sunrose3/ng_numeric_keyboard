@@ -79,7 +79,7 @@ export class NumericInputComponent implements OnInit, OnDestroy, AfterViewInit, 
   private _disabled: boolean = Options.disabled;
   private _readonly: boolean = Options.readonly;
   private _value: number | string = Options.value;
-  private _negative: boolean = Options.negative;
+  private _negative: boolean = Options.negative;//正负"-/+"使用的
 
   @Input() activeColor = '#3B3B3B';
   public isFocus = false;
@@ -282,7 +282,7 @@ export class NumericInputComponent implements OnInit, OnDestroy, AfterViewInit, 
     const { type, maxlength } = this.kp;
     const { rawValue, cursorPos, formatFn } = this.ks;
 
-    let otherPos = 1;
+    let otherPos = 1;//1.解决"00"按钮需要填充2个"0"进行占位 2.解决小数时候 第一个按"."的时候自动匹配0
     const input = (inputKey: any) => {
       const isAdd = typeof inputKey !== 'undefined';
       const newRawValue = rawValue.slice();
@@ -292,10 +292,8 @@ export class NumericInputComponent implements OnInit, OnDestroy, AfterViewInit, 
           newRawValue.splice(cursorPos, 0, "0");
           otherPos = 2;
         } else if ((this.layout === "decimals" || this.layout === "negativeDecimals") &&//为浮点数
-          ((newRawValue.length === 0 && inputKey == "0") ||//长度为0 且输入为"0"
-            (newRawValue.length === 1 && newRawValue[0] == "-" && inputKey == "0") ||//长度为1 开头是"-" 且输入的是"0"
-            //输入的是"."的时候 (开头是"-" 长度为1) 或者长度为 0
-            (inputKey === '.' && ((newRawValue[0] === '-' && newRawValue.length === 1) || (newRawValue.length === 0))))) {
+          //输入的是"."的时候 (开头是"-" 长度为1) 或者长度为 0
+          ((inputKey === '.' && ((newRawValue[0] === '-' && newRawValue.length === 1) || (newRawValue.length === 0))))) {
           newRawValue.splice(cursorPos, 0, ".");
           newRawValue.splice(cursorPos, 0, "0");
           otherPos = 2;
@@ -314,12 +312,13 @@ export class NumericInputComponent implements OnInit, OnDestroy, AfterViewInit, 
         }
       }
       let newValue = newRawValue.join('');
-      let newValueString = newRawValue.join('');
+      let newValueString = newRawValue.join('');//下面有用的
       if (formatFn(newValue)) {
         if (type === 'number') {
+          //正则表达式 解决粘贴出现奇怪的东西 (别用变量写正则 正则有缓存)
           if (this.layout === 'number' && !/[1-9]\d*|0/.test(newValue) && newValue) {
             return;
-          } else if (this.layout === 'negativeNumber' && !/^-?(([1-9]{1}\d*)|0)$/.test(newValue) && newValue && newValue !== '-') {
+          } else if (this.layout === 'negativeNumber' && !/^-?(([1-9]\d*)|0)/.test(newValue) && newValue && newValue !== '-') {
             return;
           } else if (this.layout === 'decimals' && !/^\d*(?:\.\d*)?$/.test(newValue)) {
             return;
@@ -333,14 +332,15 @@ export class NumericInputComponent implements OnInit, OnDestroy, AfterViewInit, 
         } else if (newValue.length > maxlength || (type === 'tel' && !RTel.test(newValue))) {
           return;
         }
-        //解决一直输出多个0在前面的问题 一言难尽啊!不是语言能说明白的
-        let newValueArr = newValueString === "-"||newValueString === "0." || newValueString === "-0." || inputKey ==="." ||newRawValue[newRawValue.length - 1] === "."? newRawValue : newValue.toString().split("");
+        //解决一直输出多个0在前面的输入问题 一言难尽啊!不是语言能说明白的,特殊几个情况以外保留输入的数组,剩下的获取当前值的数组.
+        //因为"000"的值是"0"
+        let newValueArr = newValueString === "-" || newValueString === "0." || newValueString === "-0." ||
+          inputKey === "." || newRawValue[newRawValue.length - 1] === "." ? newRawValue : newValue.toString().split("");
         if (newValueArr.length !== newRawValue.length && otherPos !== 2) {
           otherPos = otherPos - (newRawValue.length - newValueArr.length);
         }
 
         this.set('value', newValue);
-        // this.set('rawValue', newRawValue);
         this.set('rawValue', newValueArr);
         this.set('cursorPos', isAdd ? cursorPos + otherPos : cursorPos - otherPos);
         this.dispatch('input', newValue);
