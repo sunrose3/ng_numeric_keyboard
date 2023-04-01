@@ -102,34 +102,47 @@ export class Parent {
 
     input(key: any) {
         const { rawValue, cursorPos } = this.ks;
+        const ZERO_INDEX = 0;
+        const MINUS_SIGN = "-";
+        const DOT_SIGN = ".";
+        const DIGIT_LENGTH = 1;
+        const DOUBLE_DIGIT_LENGTH = 2;
 
-        let otherPos = 1;//1.解决"00"按钮需要填充2个"0"进行占位 2.解决小数时候 第一个按"."的时候自动匹配0
-        const input = (inputKey: any) => {
-            const isAdd = typeof inputKey !== 'undefined';
-            const newRawValue = rawValue.slice();
-            if (isAdd) {
-                if (inputKey === '00') {
-                    newRawValue.splice(cursorPos, 0, "0");
-                    newRawValue.splice(cursorPos, 0, "0");
-                    otherPos = 2;
-                } else if ((inputKey === '.' && ((newRawValue[0] === '-' && newRawValue.length === 1) || (newRawValue.length === 0)))) {
-                    newRawValue.splice(cursorPos, 0, ".");
-                    newRawValue.splice(cursorPos, 0, "0");
-                    otherPos = 2;
-                }
-                else {
-                    newRawValue.splice(cursorPos, 0, inputKey);
-                }
+        const addDigit = (digit: string, insertPos: number) => {
+            const newRawValue = [...rawValue];
+            if (digit === Keys.DOUBLEZERO) {
+                newRawValue.splice(insertPos, 0, "0", "0");
+                otherPos = DOUBLE_DIGIT_LENGTH;
+            } else if (
+                digit === Keys.DOT &&
+                ((newRawValue[ZERO_INDEX] === MINUS_SIGN && newRawValue.length === 1) ||
+                    newRawValue.length === 0)
+            ) {
+                newRawValue.splice(insertPos, 0, "0", DOT_SIGN);
+                otherPos = DOUBLE_DIGIT_LENGTH;
             } else {
-                newRawValue.splice(cursorPos - 1, 1);
-                if (newRawValue[0] === "." || newRawValue.join('').indexOf("-.") != -1) newRawValue.splice(cursorPos - 1, 1);
+                newRawValue.splice(insertPos, 0, digit);
             }
-            this.verification(newRawValue,inputKey, otherPos);
+            this.verification(newRawValue, digit, otherPos);
         };
+
+        const removeDigit = (deletePos: number) => {
+            const newRawValue = [...rawValue];
+            newRawValue.splice(deletePos - DIGIT_LENGTH, DIGIT_LENGTH);
+            if (
+                newRawValue[ZERO_INDEX] === DOT_SIGN ||
+                newRawValue.join("").indexOf(MINUS_SIGN + DOT_SIGN) !== -1
+            ) {
+                newRawValue.splice(deletePos - DIGIT_LENGTH, DIGIT_LENGTH);
+            }
+            this.verification(newRawValue, undefined, otherPos);
+        };
+
+        let otherPos = DIGIT_LENGTH;
 
         switch (key) {
             case Keys.NEGATIVE:
-                this.changeNegative(rawValue.slice(), cursorPos);
+                this.changeNegative([...rawValue], cursorPos);
                 break;
             case Keys.BLANK:
                 break;
@@ -138,11 +151,11 @@ export class Parent {
                 break;
             case Keys.ENTER:
                 this.closeKeyboard();
-                this.dispatch('enterpress');
+                this.dispatch("enterpress");
                 break;
             case Keys.DEL:
-                if (cursorPos > 0) {
-                    input(undefined);
+                if (cursorPos > ZERO_INDEX) {
+                    removeDigit(cursorPos);
                 }
                 break;
             case Keys.DOT:
@@ -157,14 +170,13 @@ export class Parent {
             case Keys.EIGHT:
             case Keys.NINE:
             case Keys.DOUBLEZERO:
-            default:
-                input(key);
+                addDigit(key, cursorPos);
                 break;
         }
     }
 
     //输入内容校验
-    verification(newRawValue,inputKey, otherPos) {
+    verification(newRawValue, inputKey, otherPos) {
         const { type, maxlength } = this.kp;
         const { cursorPos, formatFn } = this.ks;
         const isAdd = typeof inputKey !== 'undefined';
@@ -186,8 +198,7 @@ export class Parent {
                     || inputKey === "." || newRawValue[newRawValue.length - 1] === "."//输入为'.' 或者 删除'.'后所有内容('xxx.')
                     || (newValueString.indexOf("0.") != -1 && newValueString.substring(0, 2) === "0.") || (newValueString.indexOf("-0.") != -1) //'0.'或'-0.'
                     ? newRawValue : newValue.toString().split("");
-
-                // if (newValueArr.length !== newRawValue.length) otherPos = otherPos - (newRawValue.length - newValueArr.length);
+                    
                 if (newValue == 0 && (inputKey === "0" || inputKey === "00")) {//值为0 时候 输入多个0
                     if (inputKey === "00") otherPos = cursorPos == this._negative ? 1 : 0;//如果有"0"输入值,这个数值不占位
                     if (newValueString.indexOf(".") != -1) {//浮点数
@@ -198,7 +209,7 @@ export class Parent {
                         newValueArr = this._negative ? ["-", "0"] : ['0'];
                     }
                 }
-                
+
                 //计算占位值 1.输入值与显示值不同时 2.当显示值为0时,输入"00"
                 if (newValueArr.length !== newRawValue.length && !(inputKey == "00" && newValue == 0)) otherPos = otherPos - (newRawValue.length - newValueArr.length);
 
