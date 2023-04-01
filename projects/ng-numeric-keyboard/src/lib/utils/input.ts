@@ -112,9 +112,7 @@ export class Parent {
                     newRawValue.splice(cursorPos, 0, "0");
                     newRawValue.splice(cursorPos, 0, "0");
                     otherPos = 2;
-                } else if ((this.layout === "decimals" || this.layout === "negativeDecimals") &&//为浮点数
-                    //输入的是"."的时候 (开头是"-" 长度为1) 或者长度为 0
-                    ((inputKey === '.' && ((newRawValue[0] === '-' && newRawValue.length === 1) || (newRawValue.length === 0))))) {
+                } else if ((inputKey === '.' && ((newRawValue[0] === '-' && newRawValue.length === 1) || (newRawValue.length === 0)))) {
                     newRawValue.splice(cursorPos, 0, ".");
                     newRawValue.splice(cursorPos, 0, "0");
                     otherPos = 2;
@@ -123,16 +121,10 @@ export class Parent {
                     newRawValue.splice(cursorPos, 0, inputKey);
                 }
             } else {
-                if ((this.layout === "decimals" || this.layout === "negativeDecimals") && //为浮点数
-                    (newRawValue.length === 2 && newRawValue[0] == "0") ||//长度是2 第一个开头是0
-                    (newRawValue.length === 3 && newRawValue[0] == "-" && newRawValue[1] == "0")) { //长度是3 开头是"-" 第二个是"0"
-                    newRawValue.splice(cursorPos - 2, 2);
-                    otherPos = 2;
-                } else {
-                    newRawValue.splice(cursorPos - 1, 1);
-                }
+                newRawValue.splice(cursorPos - 1, 1);
+                if (newRawValue[0] === "." || newRawValue.join('').indexOf("-.") != -1) newRawValue.splice(cursorPos - 1, 1);
             }
-            this.verification(newRawValue, inputKey, otherPos, isAdd);
+            this.verification(newRawValue,inputKey, otherPos);
         };
 
         switch (key) {
@@ -172,86 +164,70 @@ export class Parent {
     }
 
     //输入内容校验
-    verification(newRawValue, inputKey, otherPos, isAdd) {
+    verification(newRawValue,inputKey, otherPos) {
         const { type, maxlength } = this.kp;
         const { cursorPos, formatFn } = this.ks;
+        const isAdd = typeof inputKey !== 'undefined';
         let newValue = newRawValue.join('');
-        let newValueString = newRawValue.join('');//下面有用的
+        let newValueArr = newRawValue;
+
         if (formatFn(newValue)) {
             if (type === 'number') {
                 //正则表达式 解决粘贴出现奇怪的东西 (别用变量写正则 正则有缓存)
-                if (this.layout === 'number' && !/[1-9]\d*|0/.test(newValue) && newValue) return;
-                if (this.layout === 'negativeNumber' && !/^-?(([1-9]\d*)|0)/.test(newValue) && newValue && newValue !== '-') return;
-                if (this.layout === 'decimals' && !/^\d*(?:\.\d*)?$/.test(newValue)) return;
-                if (this.layout === 'negativeDecimals' && !/^-?\d*(?:\.\d*)?$/.test(newValue)) return;
+                if (!/^-?\d*(?:\.\d*)?$/.test(newValue)) return;
                 newValue = parseFloat(newValue);
+                newValueArr = newValue.toString().split("");
                 if (isNaN(newValue)) {
                     newValue = '';
                     this._negative = false;//空的时候默认为正数
-                    this.set('cursorPos', 0);//加了可能有用 大脑短路了 
                 }
-            } else if (newValue.length > maxlength || (type === 'tel' && !RTel.test(newValue))) {
+                const newValueString = newRawValue.join('');//下面有用的
+                newValueArr = newValueString === "-" || newValueString === "-0"//保留'-'
+                    || inputKey === "." || newRawValue[newRawValue.length - 1] === "."//输入为'.' 或者 删除'.'后所有内容('xxx.')
+                    || (newValueString.indexOf("0.") != -1 && newValueString.substring(0, 2) === "0.") || (newValueString.indexOf("-0.") != -1) //'0.'或'-0.'
+                    ? newRawValue : newValue.toString().split("");
+
+                // if (newValueArr.length !== newRawValue.length) otherPos = otherPos - (newRawValue.length - newValueArr.length);
+                if (newValue == 0 && (inputKey === "0" || inputKey === "00")) {//值为0 时候 输入多个0
+                    if (inputKey === "00") otherPos = cursorPos == this._negative ? 1 : 0;//如果有"0"输入值,这个数值不占位
+                    if (newValueString.indexOf(".") != -1) {//浮点数
+                        if (cursorPos < newValueString.indexOf('.'))
+                            newRawValue.splice(cursorPos, 1);
+                        newValueArr = newRawValue;
+                    } else {//整数
+                        newValueArr = this._negative ? ["-", "0"] : ['0'];
+                    }
+                }
+                
+                //计算占位值 1.输入值与显示值不同时 2.当显示值为0时,输入"00"
+                if (newValueArr.length !== newRawValue.length && !(inputKey == "00" && newValue == 0)) otherPos = otherPos - (newRawValue.length - newValueArr.length);
+
+            } else if (newValue.length > maxlength || (type === 'tel' && !RTel.test(newValue))) {//电话
                 return;
             }
-
-            //解决一直输出多个0在前面的输入问题 一言难尽啊!不是语言能说明白的
-            //特殊几个情况以外保留输入的数组,剩下的获取当前值的数组.newValue.toString().split("")
-            //但是!!0.00之类的是获取到的是0会影响用户体验,所以要保留之前输入内容数组的
-            //解决的是0.00点后面的内容不让输入的问题.
-            let newValueArr = newValueString === "-" || (newValueString.indexOf("0.") != -1 && newValueString.substring(0, 2) === "0.") || newValueString === "-0" || (newValueString.indexOf("-0.") != -1) ||
-                inputKey === "." || newRawValue[newRawValue.length - 1] === "." ? newRawValue : newValue.toString().split("");
-            //-0的问题,toString()会认为是0
-            //分别解决的错误为 0000.00显示为0 
-            // -00.00 显示为0
-            //-0.000 显示为0 
-            // debugger
-            if (newValue === 0 && (inputKey === "0" || inputKey === "00")) {//当值为0时候 你还在那咔咔输入0,你想咋滴
-                if (this._negative && cursorPos < 3) {//为负数的时候,"-0." 之间加值
-                    if (newValueString.indexOf(".") != -1) {//如果是浮点数时候
-                        newRawValue.splice(cursorPos, 1);//我不会让你得逞,把你输入的内容移除
-                        newValueArr = newRawValue;
-                    } else {
-                        if (inputKey === "00") otherPos = cursorPos == 1 ? 1 : 0;//如果有"0"输入值,这个数值不占位
-                        newValueArr = ["-", "0"];//整数的时候或者整数的部分,只能保存成"-0"
-                    }
-                } else if (!this._negative && cursorPos < 2) {//输入的位置为前俩,也就是"0."或者"0"之间添加
-                    if (newValueString.indexOf(".") != -1) {//如果值包括"0."的时候,还在"."输入0,我会把输入值直接干掉!!!
-                        newRawValue.splice(cursorPos, 1);
-                        newValueArr = newRawValue;
-                    } else {
-                        if (inputKey === "00") otherPos = cursorPos == 0 ? 1 : 0;//如果有"0"输入值,这个数值不占位
-                        newValueArr = ['0'];//整数开始! 输入多少个0 它还是0
-                    }
-                }
-            }
-            //计算一下 如果值数组和输入内容数组插值 获取到应该改变位置大小
-            if (newValueArr.length !== newRawValue.length && otherPos !== 2 && inputKey !== "00") {
-                otherPos = otherPos - (newRawValue.length - newValueArr.length);
-            }
-            this.set('value', newValue);
-            this.set('rawValue', newValueArr);
-            this.set('cursorPos', isAdd ? cursorPos + otherPos : cursorPos - otherPos);
-            this.dispatch('input', newValue);
+            this.writeSetValue(newValue, newValueArr, isAdd ? cursorPos + otherPos : cursorPos - otherPos);
         }
     }
 
     //正负数
     changeNegative(newRawValue, cursorPos) {
-        this._negative = !this._negative; ''
+        this._negative = !this._negative;
         //false 是正数 true是负数
         if (this._negative) {
             newRawValue.splice(0, 0, "-");
         } else {
             newRawValue.splice(0, 1);
         }
-
-        let newValue = newRawValue.join('');
-        this.set('value', newValue);
-        this.set('rawValue', newRawValue);
-        this.set('cursorPos', this._negative ? cursorPos + 1 : cursorPos - 1);
-        this.dispatch('input', newValue);
+        this.writeSetValue(newRawValue.join(''), newRawValue, this._negative ? cursorPos + 1 : cursorPos - 1);
     }
 
+    //写入内容
+    writeSetValue(newValue, newRawValue, cursorPos) {
+        this.set('value', newValue);
+        this.set('rawValue', newRawValue);
+        this.set('cursorPos', cursorPos);
+        this.dispatch('input', newValue);
+    }
 
     moveCursor() {
         if (!this.ks.cursorActive) {

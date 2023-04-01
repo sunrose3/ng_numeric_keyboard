@@ -1,12 +1,6 @@
 import * as Keys from './keys';
 
-const TelLayout: Layout = [
-  [{ key: Keys.ONE }, { key: Keys.TWO }, { key: Keys.THREE }],
-  [{ key: Keys.FOUR }, { key: Keys.FIVE }, { key: Keys.SIX }],
-  [{ key: Keys.SEVEN }, { key: Keys.EIGHT }, { key: Keys.NINE }],
-  [{ key: Keys.DEL }, { key: Keys.ZERO }, { key: Keys.ENTER }]
-];
-
+//电话模式
 const PhoneLayout: Layout = [
   [{ key: Keys.ONE }, { key: Keys.TWO }, { key: Keys.THREE }, { key: Keys.DEL }],
   [{ key: Keys.FOUR }, { key: Keys.FIVE }, { key: Keys.SIX }, { key: Keys.ENTER }],
@@ -47,7 +41,6 @@ const NegativeNumberLayout: Layout = [
 ];
 export const Layouts: LayoutsType = {
   number: NumberLayout,
-  tel: TelLayout,
   phone: PhoneLayout,
   decimals: DecimalsLayout,
   negativeNumber:NegativeNumberLayout,
@@ -64,7 +57,6 @@ export type Layout = LayoutItem[][];
 
 export interface LayoutsType {
   number: Layout;
-  tel: Layout;
   phone: Layout;
   decimals: Layout;
   negativeNumber: Layout;
